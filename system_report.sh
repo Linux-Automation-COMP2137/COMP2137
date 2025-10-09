@@ -11,5 +11,6 @@ echo "Uptime: $(uptime -p)"
 cpuInfo=$(lscpu | grep "Model name")
 cpuInfo=${cpuInfo#*: }
 echo "CPU: $cpuInfo"
+echo "RAM: $(( $(grep MemTotal /proc/meminfo | grep -o '[0-9]*') / 1024 / 1024 )) GB"
 
 
