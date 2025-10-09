@@ -25,7 +25,18 @@ set -- $gateway
 echo "Gateway IP:" $3
 echo "DNS Server:"
 grep nameserver /etc/resolv.conf
-
-
-
-
+echo ""
+echo "System Status"
+echo "-----------------------"
+echo "Users Logged In:"
+users
+echo "Disk Space:"
+df -h
+echo "Process Count: $(ps -e | wc -l)"
+echo "Load Averages: $(cat /proc/loadavg | awk '{print $1", "$2", "$3}')"
+echo "Listening Network Ports:"
+ss -tuln | grep LISTEN
+echo "UFW Status:"
+sudo ufw status
+echo ""
+echo "---- End of Report ----"
