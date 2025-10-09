@@ -12,5 +12,20 @@ cpuInfo=$(lscpu | grep "Model name")
 cpuInfo=${cpuInfo#*: }
 echo "CPU: $cpuInfo"
 echo "RAM: $(( $(grep MemTotal /proc/meminfo | grep -o '[0-9]*') / 1024 / 1024 )) GB"
+echo "Disk(s):"
+lsblk -d -o NAME,MODEL,SIZE | grep "^sd"
+echo "Video: $(lspci | grep VGA)"
+echo "Host Address:"
+ip route | grep default
+ip addr show ens33
+echo "Gateway IP:"
+ip route | grep default
+gateway=$(ip route | grep default)
+set -- $gateway
+echo "Gateway IP:" $3
+echo "DNS Server:"
+grep nameserver /etc/resolv.conf
+
+
 
 
