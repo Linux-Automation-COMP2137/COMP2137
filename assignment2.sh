@@ -24,7 +24,7 @@ USERS="dennis aubrey captain snibbles brownie scooter sandy perrier cindy tiger 
 DENNIS_EXTRA_PUB='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4rT3vTt99Ox5kndS4HmgTrKBT8SKzhK4rhGkEVGlCI student@generic-vm'
 
 echo
-echo "Step 1: Find the network interface on 192.168.16.x (do NOT alter mgmt interface)..."
+echo "Step 1: Detect the network interface connected to the 192.168.16 network (don’t touch the mgmt one)."
 # Detect interface using ip and grep for 192.168.16 subnet
 IFACE="$(ip -o -4 addr show | awk '{print $2, $4}' | sed 's#/.*##' | awk '$2 ~ /^192\.168\.16\./ {print $1; exit}')"
 if [[ -z "${IFACE:-}" ]]; then
@@ -42,7 +42,7 @@ for f in "${NPFILES[@]}"; do
   [[ -f "$f" ]] || continue
   if grep -q "$IFACE" "$f"; then NPFILE="$f"; break; fi
 done
-# If none found, fallback to a single netplan file if only one exists
+# If none are found, just use the only netplan file if one is available.
 if [[ -z "$NPFILE" ]]; then
   count=0; lastfile=""
   for f in "${NPFILES[@]}"; do
@@ -97,7 +97,7 @@ else
     }
   ' "$NPFILE" > "$tmpfile" && mv "$tmpfile" "$NPFILE"
 
-  # Ensure dhcp4: false line present under iface
+  # Make sure dhcp4: false line present under iface
   if ! grep -q "^[[:space:]]*dhcp4: false" "$NPFILE"; then
     sed -i "/^[[:space:]]*$IFACE:[[:space:]]*$/a\    dhcp4: false" "$NPFILE"
   fi
@@ -112,7 +112,7 @@ netplan apply
 echo "[OK] Netplan configured and applied."
 
 echo
-echo "Step 2: Update /etc/hosts file to include '$TARGET_IP $HOSTNAME_TAG'..."
+echo "Step 2: Update /etc/hosts file to include '$TARGET_IP $HOSTNAME_TAG'."
 
 # Backup /etc/hosts once
 if [[ ! -f /etc/hosts.bak ]]; then
@@ -130,7 +130,7 @@ else
 fi
 
 echo
-echo "Step 3 & 4: Ensure apache2 and squid are installed and running..."
+echo "Step 3 & 4: Making sure apache2 and squid are installed and running."
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
@@ -148,13 +148,13 @@ echo "[OK] apache2 status: $(systemctl is-active apache2)"
 echo "[OK] squid status: $(systemctl is-active squid)"
 
 echo
-echo "Step 5: Creating user accounts and setting up SSH keys..."
+echo "Step 5: Creating user accounts and setting up SSH keys."
 
 for user in $USERS; do
   if id "$user" >/dev/null 2>&1; then
     echo "User '$user' already exists."
   else
-    echo "Creating user '$user' with home directory and bash shell..."
+    echo "Creating user '$user' with home directory and bash shell."
     useradd -m -s /bin/bash "$user"
   fi
 
@@ -182,7 +182,7 @@ for user in $USERS; do
 done
 
 echo
-echo "Step 6: Add 'dennis' to sudo group and add extra SSH public key..."
+echo "Step 6: Add 'dennis' to sudo group and add extra SSH public key."
 
 usermod -aG sudo dennis || true
 
@@ -195,7 +195,7 @@ else
 fi
 
 echo
-echo "===== Setup Summary ====="
+echo "----- Setup Summary -----"
 echo "Network interface: $IFACE"
 ip -4 -brief addr show "$IFACE" | sed 's/^/  /'
 echo "Default route: $(ip route show default)"
