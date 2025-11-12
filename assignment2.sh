@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-echo "Hello! Starting the server1 setup script..."
+echo "Hello! Starting the server1 setup script."
 echo "Note: Please run this script using sudo or as root."
 
 # Check for root permissions
@@ -63,7 +63,7 @@ if [[ ! -f "${NPFILE}.bak" ]]; then
   echo "Backed up $NPFILE to ${NPFILE}.bak"
 fi
 
-echo "Checking if netplan already contains static IP $TARGET_CIDR..."
+echo "Checking if netplan already contains static IP $TARGET_CIDR."
 if grep -qE "^[[:space:]]*-[[:space:]]*${TARGET_IP}/24" "$NPFILE"; then
   echo "Netplan already configured with $TARGET_CIDR on $IFACE."
 else
