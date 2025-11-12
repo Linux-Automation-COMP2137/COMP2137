@@ -190,6 +190,7 @@ for keytype in rsa ed25519; do
   fi
 done
 
+done
 
 echo
 echo "Step 6: Add 'dennis' to sudo group and add extra SSH public key."
