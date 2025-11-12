@@ -144,8 +144,16 @@ fi
 
 systemctl enable --now apache2 squid
 
-echo "[OK] apache2 status: $(systemctl is-active apache2)"
-echo "[OK] squid status: $(systemctl is-active squid)"
+echo -n "[OK] apache2 status: "
+systemctl is-active apache2 || echo "inactive"
+
+echo -n "[OK] squid status: "
+systemctl is-active squid || echo "inactive"
+
+echo
+echo "Default route:"
+ip route | grep default || echo "No default route found"
+
 
 echo
 echo "Step 5: Creating user accounts and setting up SSH keys."
@@ -171,15 +179,17 @@ for user in $USERS; do
   AUTH_KEYS="$SSHDIR/authorized_keys"
   [[ -f "$AUTH_KEYS" ]] || { touch "$AUTH_KEYS"; chmod 600 "$AUTH_KEYS"; chown "$user:$user" "$AUTH_KEYS"; }
 
-  # Add public keys to authorized_keys if not already present
-  for keytype in rsa ed25519; do
-    PUB="$SSHDIR/id_${keytype}.pub"
+# Add public keys to authorized_keys if not already there
+for keytype in rsa ed25519; do
+  PUB="$SSHDIR/id_${keytype}.pub"
+  if [ -f "$PUB" ]; then
     if ! grep -qF "$(cat "$PUB")" "$AUTH_KEYS"; then
       cat "$PUB" >> "$AUTH_KEYS"
+      echo "Added ${keytype} key for $user"
     fi
-  done
-
+  fi
 done
+
 
 echo
 echo "Step 6: Add 'dennis' to sudo group and add extra SSH public key."
@@ -196,17 +206,38 @@ fi
 
 echo
 echo "----- Setup Summary -----"
+
 echo "Network interface: $IFACE"
-ip -4 -brief addr show "$IFACE" | sed 's/^/  /'
-echo "Default route: $(ip route show default)"
-echo "Hosts file entry: $(grep --color=auto -E \"^[[:space:]]*$TARGET_IP[[:space:]]+$HOSTNAME_TAG([[:space:]]|\$)\" /etc/hosts || echo 'MISSING')"
-echo "apache2 status: $(systemctl is-active apache2)"
-echo "squid status: $(systemctl is-active squid)"
-echo "Users configured: $USERS"
-echo "Netplan file: $NPFILE"
-echo "========================="
+ip -4 addr show "$IFACE"
+
+echo
+echo "Default route:"
+ip route | grep default || echo "No default route found"
+
+echo
+echo "Hosts file entry:"
+grep "$TARGET_IP" /etc/hosts || echo "MISSING"
+
+echo
+echo "apache2 status:"
+systemctl is-active apache2
+
+echo
+echo "squid status:"
+systemctl is-active squid
+
+echo
+echo "Users created:"
+echo "$USERS"
+
+echo
+echo "Netplan file used:"
+echo "$NPFILE"
+
 echo
 echo "[DONE] Server1 setup complete!"
+
+
 
 exit 0
 
