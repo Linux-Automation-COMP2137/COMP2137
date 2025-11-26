@@ -1,5 +1,4 @@
 #!/bin/bash
-# lab3.sh - deploy configure-host.sh to both servers and update local hosts file
 
 # ignore interrupt signals
 trap '' TERM
@@ -21,16 +20,15 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-# set verbose flag to pass into configure-host.sh
+# if verbose is on, pass -verbose to configure-host.sh
 remoteVerbose=""
 if [ $verbose -eq 1 ]; then
     remoteVerbose="-verbose"
     echo "Verbose mode on"
 fi
 
-# ============================
 # send to server1-mgmt
-# ============================
+# ----------------------
 
 scp configure-host.sh remoteadmin@server1-mgmt:/root 2>/dev/null
 if [ $? -ne 0 ]; then
@@ -50,9 +48,8 @@ else
     fi
 fi
 
-# ============================
 # send to server2-mgmt
-# ============================
+# ---------------------
 
 scp configure-host.sh remoteadmin@server2-mgmt:/root 2>/dev/null
 if [ $? -ne 0 ]; then
@@ -72,9 +69,8 @@ else
     fi
 fi
 
-# ============================
-# update local machine hosts
-# ============================
+# update local machine host
+# ----------------------------
 
 ./configure-host.sh -hostentry loghost 192.168.16.3 $remoteVerbose
 if [ $? -ne 0 ]; then
