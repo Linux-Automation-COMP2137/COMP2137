@@ -107,9 +107,9 @@ if [ -n "$desiredIP" ]; then
                 echo "$desiredIP $(hostname)" >> /etc/hosts 2>/dev/null
             fi
 
-            # very simple netplan update (assumes one file and existing IP)
-            netplanFile="/etc/netplan/00-installer-config.yaml"
-            if [ -f "$netplanFile" ]; then
+             # very simple netplan update (assumes one yaml file and existing IP)
+            netplanFile=$(ls /etc/netplan/*.yaml 2>/dev/null | head -n 1)
+            if [ -n "$netplanFile" ] && [ -f "$netplanFile" ]; then
                 if [ -n "$currentIP" ] && grep -q "$currentIP" "$netplanFile" 2>/dev/null; then
                     sed -i "s/$currentIP/$desiredIP/g" "$netplanFile" 2>/dev/null
                 fi
