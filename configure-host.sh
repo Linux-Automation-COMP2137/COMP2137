@@ -6,10 +6,10 @@ trap '' HUP
 trap '' INT
 
 verbose=0
-desiredName=""
-desiredIP=""
+newHostName=""
+newIp=""
 hostEntryName=""
-hostEntryIP=""
+hostIP=""
 
 # handle basic command-line options with case and $1
 while [ $# -gt 0 ]; do
@@ -19,17 +19,17 @@ while [ $# -gt 0 ]; do
             ;;
         -name)
             shift
-            desiredName="$1"
+            newHostName="$1"
             ;;
         -ip)
             shift
-            desiredIP="$1"
+            newIp="$1"
             ;;
         -hostentry)
             shift
             hostEntryName="$1"
             shift
-            hostEntryIP="$1"
+            hostIP="$1"
             ;;
         *)
             echo "Unknown option: $1" >&2
@@ -41,43 +41,43 @@ done
 
 # handle -name option
 # --------------------
-if [ -n "$desiredName" ]; then
+if [ -n "$newHostName" ]; then
     currentName=$(hostname)
 
-    if [ "$currentName" = "$desiredName" ]; then
+    if [ "$currentName" = "$newHostName" ]; then
         if [ $verbose -eq 1 ]; then
-            echo "Hostname already set to $desiredName"
+            echo "Hostname already set to $newHostName"
         fi
     else
         if [ $verbose -eq 1 ]; then
-            echo "Changing hostname from $currentName to $desiredName"
+            echo "Changing hostname from $currentName to $newHostName"
         fi
 
         # saves the updated name into /etc/hostname
-        echo "$desiredName" > /etc/hostname 2>/dev/null
+        echo "$newHostName" > /etc/hostname 2>/dev/null
         if [ $? -ne 0 ]; then
             echo "Error: could not update /etc/hostname" >&2
         fi
 
         # check /etc/hosts and update the name if the old one shows up
         if grep -q "$currentName" /etc/hosts 2>/dev/null; then
-            sed -i "s/$currentName/$desiredName/g" /etc/hosts 2>/dev/null
+            sed -i "s/$currentName/$newHostName/g" /etc/hosts 2>/dev/null
         else
             # if the old name doesnt show up just add a simple line
-            echo "127.0.1.1 $desiredName" >> /etc/hosts 2>/dev/null
+            echo "127.0.1.1 $newHostName" >> /etc/hosts 2>/dev/null
         fi
 
         # apply the new hostname to the running system
-        hostnamectl set-hostname "$desiredName" 2>/dev/null
+        hostnamectl set-hostname "$newHostName" 2>/dev/null
 
         # records this change in the logs
-        logger -t configure-host -p user.info "Hostname changed from $currentName to $desiredName"
+        logger -t configure-host -p user.info "Hostname changed from $currentName to $newHostName"
     fi
 fi
 
 # handle -ip option
 # ------------------
-if [ -n "$desiredIP" ]; then
+if [ -n "$newIp" ]; then
     # figure out the LAN interface from the default route
     laniface=$(ip r | grep default | awk '{print $5}')
     currentIP=""
@@ -88,34 +88,34 @@ if [ -n "$desiredIP" ]; then
         # check what IPv4 address that interface is using
         currentIP=$(ip -4 a show "$laniface" | grep -w inet | awk '{print $2}' | cut -d/ -f1)
 
-        if [ "$currentIP" = "$desiredIP" ]; then
+        if [ "$currentIP" = "$newIp" ]; then
             if [ $verbose -eq 1 ]; then
-                echo "IP address on $laniface already set to $desiredIP"
+                echo "IP address on $laniface already set to $newIp"
             fi
         else
             if [ $verbose -eq 1 ]; then
-                echo "Changing IP on $laniface from $currentIP to $desiredIP"
+                echo "Changing IP on $laniface from $currentIP to $newIp"
             fi
 
             # update /etc/hosts
             if [ -n "$currentIP" ] && grep -q "$currentIP" /etc/hosts 2>/dev/null; then
-                sed -i "s/$currentIP/$desiredIP/g" /etc/hosts 2>/dev/null
-            elif ! grep -q "$desiredIP $HOSTNAME" /etc/hosts 2>/dev/null && ! grep -q "$desiredIP $(hostname)" /etc/hosts 2>/dev/null; then
-                echo "$desiredIP $(hostname)" >> /etc/hosts 2>/dev/null
+                sed -i "s/$currentIP/$newIp/g" /etc/hosts 2>/dev/null
+            elif ! grep -q "$newIp $HOSTNAME" /etc/hosts 2>/dev/null && ! grep -q "$newIp $(hostname)" /etc/hosts 2>/dev/null; then
+                echo "$newIp $(hostname)" >> /etc/hosts 2>/dev/null
             fi
 
              # basic netplan change, assuming one YAML file and a set IP
             netplanFile=$(ls /etc/netplan/*.yaml 2>/dev/null | head -n 1)
             if [ -n "$netplanFile" ] && [ -f "$netplanFile" ]; then
                 if [ -n "$currentIP" ] && grep -q "$currentIP" "$netplanFile" 2>/dev/null; then
-                    sed -i "s/$currentIP/$desiredIP/g" "$netplanFile" 2>/dev/null
+                    sed -i "s/$currentIP/$newIp/g" "$netplanFile" 2>/dev/null
                 fi
             fi
 
             # apply IP to the running system
             if [ -n "$laniface" ]; then
                 ip addr flush dev "$laniface" 2>/dev/null
-                ip addr add "$desiredIP"/24 dev "$laniface" 2>/dev/null
+                ip addr add "$newIp"/24 dev "$laniface" 2>/dev/null
                 ip link set "$laniface" up 2>/dev/null
             fi
 
@@ -125,22 +125,22 @@ if [ -n "$desiredIP" ]; then
             fi
 
             # record the change in the logs
-            logger -t configure-host -p user.info "IP on $laniface changed from $currentIP to $desiredIP"
+            logger -t configure-host -p user.info "IP on $laniface changed from $currentIP to $newIp"
         fi
     fi
 fi
 
 # handle -hostentry option
 # -------------------------
-if [ -n "$hostEntryName" ] && [ -n "$hostEntryIP" ]; then
+if [ -n "$hostEntryName" ] && [ -n "$hostIP" ]; then
     # confirm whether /etc/hosts already contains this IP and hostname
-    if grep -q "$hostEntryIP $hostEntryName" /etc/hosts 2>/dev/null; then
+    if grep -q "$hostIP $hostEntryName" /etc/hosts 2>/dev/null; then
         if [ $verbose -eq 1 ]; then
-            echo "/etc/hosts already has entry: $hostEntryIP $hostEntryName"
+            echo "/etc/hosts already has entry: $hostIP $hostEntryName"
         fi
     else
         if [ $verbose -eq 1 ]; then
-            echo "Updating /etc/hosts entry for $hostEntryName to $hostEntryIP"
+            echo "Updating /etc/hosts entry for $hostEntryName to $hostIP"
         fi
 
         # remove any existing lines with this name
@@ -149,11 +149,11 @@ if [ -n "$hostEntryName" ] && [ -n "$hostEntryIP" ]; then
         fi
 
         # add the correct IP and name line
-        echo "$hostEntryIP $hostEntryName" >> /etc/hosts 2>/dev/null
+        echo "$hostIP $hostEntryName" >> /etc/hosts 2>/dev/null
         if [ $? -ne 0 ]; then
             echo "Error: could not update /etc/hosts" >&2
         else
-            logger -t configure-host -p user.info "Updated host entry: $hostEntryIP $hostEntryName"
+            logger -t configure-host -p user.info "Updated host entry: $hostIP $hostEntryName"
         fi
     fi
 fi
